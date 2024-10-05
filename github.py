@@ -229,6 +229,30 @@ def Topic_Visuals(selected_topic,selected_creation_date,filtered_data):
                         title='Comparison of Stars and Forks per Repository')
             st.plotly_chart(fig)
 
+        if not filtered_data.empty:
+            st.dataframe(filtered_data)
+        else:
+            st.write("No repositories found with the selected filters.")
+
+def repo_visuals(filtered_data):
+      # Allow user to select a repository index
+    repo_index = st.sidebar.number_input("Select Repository Index", min_value=0, max_value=len(filtered_data)-1, step=1)
+
+    # Display details of the selected repository
+    if not filtered_data.empty:
+        selected_repo = filtered_data.iloc[repo_index]
+        st.subheader(f"Details of Repository: {selected_repo['Repository_Name']}")
+        st.write(f"**Owner:** {selected_repo['Owner']}")
+        st.write(f"**Description:** {selected_repo['Description']}")
+        st.write(f"**Programming Language:** {selected_repo['Programming_Language']}")
+        st.write(f"**Stars:** {selected_repo['Number_of_Stars']}")
+        st.write(f"**Forks:** {selected_repo['Number_of_Forks']}")
+        st.write(f"**Open Issues:** {selected_repo['Number_of_Open_Issues']}")
+        st.write(f"**License Type:** {selected_repo['License_Type']}")
+        st.write(f"**Creation Date:** {selected_repo['Creation_Date']}")
+        st.write(f"**Last Updated Date:** {selected_repo['Last_Updated_Date']}")
+
+
 
 
 
@@ -244,7 +268,7 @@ def run_app():
     selected_topic,selected_creation_date,filtered_data=filters(data)
 
     Topic_Visuals(selected_topic,selected_creation_date,filtered_data)
-
+    repo_visuals(data)
 
 
 # Run the app
