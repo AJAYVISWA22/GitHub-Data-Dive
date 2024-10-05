@@ -40,7 +40,6 @@ def img_desc(selected_topic):
     description = topic_descriptions.get(selected_topic.lower(), "No description available for this topic.")
     st.write(description)
 
-
 def filters(data):
     # Filter by topic
     topics = data['Topic'].unique()
@@ -49,42 +48,22 @@ def filters(data):
     # Display image and description for the selected topic
     img_desc(selected_topic)
 
-
-
     # Filter programming languages dynamically based on the selected topic
-    if selected_topic:
-        filtered_by_topic = data[data['Topic'] == selected_topic]
-        languages = ['Default'] + list(filtered_by_topic['Programming_Language'].unique())
-    else:
-        filtered_by_topic = data
-        languages = ['Default'] + list(data['Programming_Language'].unique())
-
+    filtered_by_topic = data[data['Topic'] == selected_topic] if selected_topic else data
+    languages = ['Default'] + list(filtered_by_topic['Programming_Language'].unique())
+    
     selected_language = st.sidebar.selectbox("Select Programming Language", languages)
 
-
-
-    # Filter by creation date dynamically based on the selected topic
-    if selected_topic:
-        creation_dates = ['Default'] + list(pd.to_datetime(filtered_by_topic['Creation_Date']).dt.year.unique())
-    else:
-        creation_dates = ['Default'] + list(pd.to_datetime(data['Creation_Date']).dt.year.unique())
-
+    # Filter by creation and last updated date
+    creation_dates = ['Default'] + list(pd.to_datetime(filtered_by_topic['Creation_Date']).dt.year.unique())
     selected_creation_date = st.sidebar.selectbox("Select Creation Year", creation_dates)
 
-    # Filter by last updated date dynamically based on the selected topic
-    if selected_topic:
-        last_updated_dates = ['Default'] + list(pd.to_datetime(filtered_by_topic['Last_Updated_Date']).dt.year.unique())
-    else:
-        last_updated_dates = ['Default'] + list(pd.to_datetime(data['Last_Updated_Date']).dt.year.unique())
-
+    last_updated_dates = ['Default'] + list(pd.to_datetime(filtered_by_topic['Last_Updated_Date']).dt.year.unique())
     selected_last_updated_date = st.sidebar.selectbox("Select Last Updated Year", last_updated_dates)
 
-    
-    
-
-    # Apply filters: filter only if a non-default option is selected
+    # Apply filters
     filtered_data = filtered_by_topic.copy()
-
+    
     if selected_language != 'Default':
         filtered_data = filtered_data[filtered_data['Programming_Language'] == selected_language]
 
@@ -93,184 +72,120 @@ def filters(data):
 
     if selected_last_updated_date != 'Default':
         filtered_data = filtered_data[pd.to_datetime(filtered_data['Last_Updated_Date']).dt.year == int(selected_last_updated_date)]
-     
-    # Filter by activity level (based on number of stars) dynamically based on the selected topic
-    if selected_topic and selected_language:
-        min_stars = int(filtered_data['Number_of_Stars'].min())
-        max_stars = int(filtered_data['Number_of_Stars'].max())
-    else:
-        min_stars = int(data['Number_of_Stars'].min())
-        max_stars = int(data['Number_of_Stars'].max())
 
-    if min_stars==max_stars:
-        activity_level=st.sidebar.write("X",min_stars)
-    else:
-        activity_level = st.sidebar.slider("Select Minimum Number of Stars", min_stars, max_stars, min_stars, int((min_stars+ max_stars) / 10))
+   # Activity level filter
+    if not filtered_data.empty:
+        min_stars, max_stars = filtered_data['Number_of_Stars'].min(), filtered_data['Number_of_Stars'].max()
+        unique_stars = filtered_data['Number_of_Stars'].unique()
 
-
-    filtered_data = filtered_data[filtered_data['Number_of_Stars'] >= activity_level]
-
-    return selected_topic,selected_creation_date,filtered_data
-
-def Topic_Visuals(selected_topic,selected_creation_date,filtered_data):
-
-        
-        st.markdown(f"<h2 style='text-align: LEFT;'>Filtered Repositories under Topic: {selected_topic.upper()}</h2>", unsafe_allow_html=True)
-        st.markdown(f"<h3 style='text-align: LEFT;'>Total Repositories Found: {len(filtered_data)}</h3>", unsafe_allow_html=True)
-
-
-        if not filtered_data.empty:
-            st.dataframe(filtered_data)
+        if len(unique_stars) > 1:
+            activity_level = st.sidebar.slider("Select Minimum Number of Stars", min_stars, max_stars, min_stars, int((min_stars + max_stars) / 10))
+            filtered_data = filtered_data[filtered_data['Number_of_Stars'] >= activity_level]
         else:
-            st.write("No repositories found with the selected filters.")
+            st.sidebar.write("Only one unique star count available. Using that value for filtering.")
+            filtered_data = filtered_data[filtered_data['Number_of_Stars'] == unique_stars[0]]
+    else:
+        st.sidebar.write("No data available to filter.")
 
-        # Visualizations
-        st.subheader("Visual Insights over Repository")
+    return selected_topic, selected_creation_date, filtered_data
 
+def Topic_Visuals(selected_topic, selected_creation_date, filtered_data):
+    st.markdown(f"<h2 style='text-align: LEFT;'>Filtered Repositories under Topic: {selected_topic.upper()}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align: LEFT;'>Total Repositories Found: {len(filtered_data)}</h3>", unsafe_allow_html=True)
+
+    if not filtered_data.empty:
+        st.dataframe(filtered_data)
+    else:
+        st.write("No repositories found with the selected filters.")
+
+    # Visualizations
+    st.subheader("Visual Insights over Repository")
     
+    # Pie chart: Distribution of repositories by programming language
+    if 'Programming_Language' in filtered_data.columns:
+        lang_data = filtered_data.groupby('Programming_Language').size().reset_index(name='Repository_Count')
+        fig = px.pie(lang_data, names='Programming_Language', values='Repository_Count', title='Repositories by Programming Language')
+        st.plotly_chart(fig)
 
-        # Pie chart: Distribution of repositories by programming language
-        if not filtered_data.empty and 'Programming_Language' in filtered_data.columns:
-            st.subheader(" Distribution by Programming Language")
-
-            # Group by Programming_Language to get the count of repositories for each language
-            lang_data = filtered_data.groupby('Programming_Language').size().reset_index(name='Repository_Count')
-
-            # Create pie chart
-            fig = px.pie(lang_data, names='Programming_Language', values='Repository_Count', 
-                        title='Repositories by Programming Language', 
-                        labels={'Repository_Count': 'Repository Count'})
-
-            # Display the pie chart
+    # Line chart: Number of repositories created per year
+    if 'Creation_Date' in filtered_data.columns:
+        filtered_data['Creation_Year'] = pd.to_datetime(filtered_data['Creation_Date']).dt.year
+        if selected_creation_date == 'Default':
+            year_data = filtered_data.groupby('Creation_Year').size().reset_index(name='Repository_Count')
+            fig = px.line(year_data, x='Creation_Year', y='Repository_Count', title='Repository Creation Trend (Yearly)')
             st.plotly_chart(fig)
-
-
-        # Line chart: Number of repositories created per year
-        if not filtered_data.empty and 'Creation_Date' in filtered_data.columns:
-            
-            if selected_creation_date == 'Default':
-                # Default behavior: Show repository counts by year
-                st.subheader(" Repositories Created Over Time (Yearly)")
-                filtered_data['Creation_Year'] = pd.to_datetime(filtered_data['Creation_Date']).dt.year
-                year_data = filtered_data.groupby('Creation_Year').size().reset_index(name='Repository_Count')
-                fig = px.line(year_data, x='Creation_Year', y='Repository_Count', title='Repository Creation Trend (Yearly)')
-                st.plotly_chart(fig)
-
-            else:
-                # If a specific year is selected: Show repository counts by month for that year
-                st.subheader(f" Repositories Created in {selected_creation_date} (Monthly)")
-                filtered_data['Creation_Month'] = pd.to_datetime(filtered_data['Creation_Date']).dt.month
-                month_data = filtered_data.groupby('Creation_Month').size().reset_index(name='Repository_Count')
-                fig = px.line(month_data, x='Creation_Month', y='Repository_Count', title=f'Repository Creation Trend for {selected_creation_date} (Monthly)')
-                st.plotly_chart(fig)
-
-
-        # Plotting a bar chart of the number of stars by repository
-        if not filtered_data.empty and 'Number_of_Stars' in filtered_data.columns:
-            st.subheader("Number of Stars by Repository")
-            
-            # Create the bar chart using Plotly
-            fig = px.bar(filtered_data, x='Repository_Name', y='Number_of_Stars', 
-                        title='Number of Stars per Repository',
-                        labels={'Repository_Name': 'Repository', 'Number_of_Stars': 'Stars'},
-                        text='Number_of_Stars')  # Display the number of stars on the bars
-            
-            # Customize the chart appearance
-            fig.update_traces(textposition='outside', marker_color='blue')
-            fig.update_layout(xaxis_title="Repository", yaxis_title="Number of Stars")
-            
-            # Display the chart in Streamlit
-            st.plotly_chart(fig)
-
-
-        # Bar chart: Number of forks per repository
-        if not filtered_data.empty and 'Number_of_Forks' in filtered_data.columns:
-            st.subheader(" Number of Forks per Repository")
-            fig = px.bar(filtered_data, x='Repository_Name', y='Number_of_Forks', 
-                        title='Number of Forks per Repository', 
-                        labels={'Repository_Name': 'Repository', 'Number_of_Forks': 'Forks'})
-            st.plotly_chart(fig)
-
-        # Bar chart: Number of open issues per repository
-        if not filtered_data.empty and 'Number_of_Open_Issues' in filtered_data.columns:
-            st.subheader(" Number of Open Issues per Repository")
-            fig = px.bar(filtered_data, x='Repository_Name', y='Number_of_Open_Issues', 
-                        title='Number of Open Issues per Repository', 
-                        labels={'Repository_Name': 'Repository', 'Number_of_Open_Issues': 'Open Issues'})
-            st.plotly_chart(fig)
-
-
-        # Pie chart: Distribution of repositories by license type
-        if not filtered_data.empty and 'License_Type' in filtered_data.columns:
-            st.subheader(" Distribution by License Type")
-
-            # Group by License_Type to get the count of repositories for each license
-            license_data = filtered_data.groupby('License_Type').size().reset_index(name='Repository_Count')
-
-            # Create pie chart
-            fig = px.pie(license_data, names='License_Type', values='Repository_Count', 
-                        title='Repositories by License Type', 
-                        labels={'Repository_Count': 'Repository Count'})
-
-            # Display the pie chart
-            st.plotly_chart(fig)
-
-        
-            # Bar chart: Comparison of stars and forks
-        if not filtered_data.empty and 'Number_of_Stars' in filtered_data.columns and 'Number_of_Forks' in filtered_data.columns:
-            st.subheader(" Comparison of Stars and Forks")
-            
-            # Create a new DataFrame for stars and forks comparison
-            comparison_data = filtered_data[['Repository_Name', 'Number_of_Stars', 'Number_of_Forks']].melt(id_vars='Repository_Name', 
-                                                                                                        value_vars=['Number_of_Stars', 'Number_of_Forks'],
-                                                                                                        var_name='Metric', value_name='Count')
-
-            fig = px.bar(comparison_data, x='Repository_Name', y='Count', color='Metric', barmode='group',
-                        title='Comparison of Stars and Forks per Repository')
-            st.plotly_chart(fig)
-
-        if not filtered_data.empty:
-            st.dataframe(filtered_data)
         else:
-            st.write("No repositories found with the selected filters.")
+            month_data = filtered_data[filtered_data['Creation_Year'] == int(selected_creation_date)].groupby(pd.to_datetime(filtered_data['Creation_Date']).dt.month).size().reset_index(name='Repository_Count')
+            fig = px.line(month_data, x='Creation_Date', y='Repository_Count', title=f'Repository Creation Trend for {selected_creation_date} (Monthly)')
+            st.plotly_chart(fig)
+
+    # Bar charts
+    if 'Number_of_Stars' in filtered_data.columns:
+        fig = px.bar(filtered_data, x='Repository_Name', y='Number_of_Stars', title='Number of Stars per Repository', text='Number_of_Stars')
+        fig.update_traces(textposition='outside', marker_color='blue')
+        st.plotly_chart(fig)
+
+    if 'Number_of_Forks' in filtered_data.columns:
+        fig = px.bar(filtered_data, x='Repository_Name', y='Number_of_Forks', title='Number of Forks per Repository')
+        st.plotly_chart(fig)
+
+    if 'Number_of_Open_Issues' in filtered_data.columns:
+        fig = px.bar(filtered_data, x='Repository_Name', y='Number_of_Open_Issues', title='Number of Open Issues per Repository')
+        st.plotly_chart(fig)
+
+    # Pie chart: Distribution of repositories by license type
+    if 'License_Type' in filtered_data.columns:
+        license_data = filtered_data.groupby('License_Type').size().reset_index(name='Repository_Count')
+        fig = px.pie(license_data, names='License_Type', values='Repository_Count', title='Repositories by License Type')
+        st.plotly_chart(fig)
+
+    # Bar chart: Comparison of stars and forks
+    if 'Number_of_Stars' in filtered_data.columns and 'Number_of_Forks' in filtered_data.columns:
+        comparison_data = filtered_data[['Repository_Name', 'Number_of_Stars', 'Number_of_Forks']].melt(id_vars='Repository_Name', value_vars=['Number_of_Stars', 'Number_of_Forks'], var_name='Metric', value_name='Count')
+        fig = px.bar(comparison_data, x='Repository_Name', y='Count', color='Metric', barmode='group', title='Comparison of Stars and Forks per Repository')
+        st.plotly_chart(fig)
+
+    st.markdown(f"<h2 style='text-align: LEFT;'>Filtered Repositories under Topic: {selected_topic.upper()}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align: LEFT;'>Total Repositories Found: {len(filtered_data)}</h3>", unsafe_allow_html=True)
+
+    if not filtered_data.empty:
+        st.dataframe(filtered_data)
+    else:
+        st.write("No repositories found with the selected filters.")
+
 
 def repo_visuals(filtered_data):
-      # Allow user to select a repository index
-    repo_index = st.sidebar.number_input("Select Repository Index", min_value=0, max_value=len(filtered_data)-1, step=1)
+    st.markdown(f"<h2 style='text-align: center;'>Selected  Repository </h2>", unsafe_allow_html=True)
+    repo_index = st.sidebar.number_input("Select Repository ID", min_value=0, max_value=len(filtered_data)-1, step=1)
 
-    # Display details of the selected repository
     if not filtered_data.empty:
         selected_repo = filtered_data.iloc[repo_index]
-        st.subheader(f"Details of Repository: {selected_repo['Repository_Name']}")
-        st.write(f"**Owner:** {selected_repo['Owner']}")
-        st.write(f"**Description:** {selected_repo['Description']}")
-        st.write(f"**Programming Language:** {selected_repo['Programming_Language']}")
-        st.write(f"**Stars:** {selected_repo['Number_of_Stars']}")
-        st.write(f"**Forks:** {selected_repo['Number_of_Forks']}")
-        st.write(f"**Open Issues:** {selected_repo['Number_of_Open_Issues']}")
-        st.write(f"**License Type:** {selected_repo['License_Type']}")
-        st.write(f"**Creation Date:** {selected_repo['Creation_Date']}")
-        st.write(f"**Last Updated Date:** {selected_repo['Last_Updated_Date']}")
+        
+        st.markdown(f"""
+            <div style='background-color: #f4f4f4; padding: 20px; border-radius: 10px;'>
+                <h2 style='color: #2E86C1; text-align: center;'>{selected_repo['Repository_Name']}</h2>
+                <p style='text-align: center; font-size: 16px; color: #566573;'>⭐ {selected_repo['Number_of_Stars']} | 🍴 {selected_repo['Number_of_Forks']} | 🐛 {selected_repo['Number_of_Open_Issues']}</p>
+                <p style='text-align: center; font-size: 14px; color: #7D3C98;'>Owner: {selected_repo['Owner']}</p>
+                <p style='text-align: center; font-size: 14px; color: #7D3C98;'>Description: {selected_repo['Description']}</p>
+                <p style='text-align: center; font-size: 14px; color: #7D3C98;'>Language: {selected_repo['Programming_Language']}</p>
+                <p style='text-align: center; font-size: 14px; color: #7D3C98;'>Created On: {pd.to_datetime(selected_repo['Creation_Date']).strftime('%B %d, %Y')}</p>
+                <p style='text-align: center; font-size: 14px; color: #7D3C98;'>Last Updated: {pd.to_datetime(selected_repo['Last_Updated_Date']).strftime('%B %d, %Y')}</p>
+                <p style='text-align: center; font-size: 14px; color: #7D3C98;'>License: {selected_repo['License_Type']}</p>
+                <p style='text-align: center; font-size: 14px; color: #7D3C98;'><a href="{selected_repo['URL']}" style="color: #E74C3C;">View Repository</a></p>
+            </div>
+        """, unsafe_allow_html=True)
 
+# Main App
+st.title("GitHub Repository Explorer")
 
+# Load Data
+df = load_data()
 
+# Filter Repositories
+selected_topic, selected_creation_date, filtered_data = filters(df)
 
+# Topic Visuals
+Topic_Visuals(selected_topic, selected_creation_date, filtered_data)
 
-
-# Main Streamlit app function
-def run_app():
-    # Streamlit app title
-    st.title("GitHub Repositories Explorer")
-
-    # Load the dataset
-    data = load_data()
-
-    selected_topic,selected_creation_date,filtered_data=filters(data)
-
-    Topic_Visuals(selected_topic,selected_creation_date,filtered_data)
-    repo_visuals(data)
-
-
-# Run the app
-if __name__ == "__main__":
-    run_app()
+# Display selected repository information
+repo_visuals(df)
