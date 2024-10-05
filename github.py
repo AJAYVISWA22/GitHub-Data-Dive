@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
 import os
+import plotly.express as px
 
 # Create the PostgreSQL engine
 engine = create_engine('postgresql+psycopg2://postgres:Ajay@localhost:5432/github_data')
@@ -109,7 +110,127 @@ def filters(data):
 
     filtered_data = filtered_data[filtered_data['Number_of_Stars'] >= activity_level]
 
-    return selected_topic,filtered_data
+    return selected_topic,selected_creation_date,filtered_data
+
+def Topic_Visuals(selected_topic,selected_creation_date,filtered_data):
+
+        
+        st.markdown(f"<h2 style='text-align: LEFT;'>Filtered Repositories under Topic: {selected_topic.upper()}</h2>", unsafe_allow_html=True)
+        st.markdown(f"<h3 style='text-align: LEFT;'>Total Repositories Found: {len(filtered_data)}</h3>", unsafe_allow_html=True)
+
+
+        if not filtered_data.empty:
+            st.dataframe(filtered_data)
+        else:
+            st.write("No repositories found with the selected filters.")
+
+        # Visualizations
+        st.subheader("Visual Insights over Repository")
+
+    
+
+        # Pie chart: Distribution of repositories by programming language
+        if not filtered_data.empty and 'Programming_Language' in filtered_data.columns:
+            st.subheader(" Distribution by Programming Language")
+
+            # Group by Programming_Language to get the count of repositories for each language
+            lang_data = filtered_data.groupby('Programming_Language').size().reset_index(name='Repository_Count')
+
+            # Create pie chart
+            fig = px.pie(lang_data, names='Programming_Language', values='Repository_Count', 
+                        title='Repositories by Programming Language', 
+                        labels={'Repository_Count': 'Repository Count'})
+
+            # Display the pie chart
+            st.plotly_chart(fig)
+
+
+        # Line chart: Number of repositories created per year
+        if not filtered_data.empty and 'Creation_Date' in filtered_data.columns:
+            
+            if selected_creation_date == 'Default':
+                # Default behavior: Show repository counts by year
+                st.subheader(" Repositories Created Over Time (Yearly)")
+                filtered_data['Creation_Year'] = pd.to_datetime(filtered_data['Creation_Date']).dt.year
+                year_data = filtered_data.groupby('Creation_Year').size().reset_index(name='Repository_Count')
+                fig = px.line(year_data, x='Creation_Year', y='Repository_Count', title='Repository Creation Trend (Yearly)')
+                st.plotly_chart(fig)
+
+            else:
+                # If a specific year is selected: Show repository counts by month for that year
+                st.subheader(f" Repositories Created in {selected_creation_date} (Monthly)")
+                filtered_data['Creation_Month'] = pd.to_datetime(filtered_data['Creation_Date']).dt.month
+                month_data = filtered_data.groupby('Creation_Month').size().reset_index(name='Repository_Count')
+                fig = px.line(month_data, x='Creation_Month', y='Repository_Count', title=f'Repository Creation Trend for {selected_creation_date} (Monthly)')
+                st.plotly_chart(fig)
+
+
+        # Plotting a bar chart of the number of stars by repository
+        if not filtered_data.empty and 'Number_of_Stars' in filtered_data.columns:
+            st.subheader("Number of Stars by Repository")
+            
+            # Create the bar chart using Plotly
+            fig = px.bar(filtered_data, x='Repository_Name', y='Number_of_Stars', 
+                        title='Number of Stars per Repository',
+                        labels={'Repository_Name': 'Repository', 'Number_of_Stars': 'Stars'},
+                        text='Number_of_Stars')  # Display the number of stars on the bars
+            
+            # Customize the chart appearance
+            fig.update_traces(textposition='outside', marker_color='blue')
+            fig.update_layout(xaxis_title="Repository", yaxis_title="Number of Stars")
+            
+            # Display the chart in Streamlit
+            st.plotly_chart(fig)
+
+
+        # Bar chart: Number of forks per repository
+        if not filtered_data.empty and 'Number_of_Forks' in filtered_data.columns:
+            st.subheader(" Number of Forks per Repository")
+            fig = px.bar(filtered_data, x='Repository_Name', y='Number_of_Forks', 
+                        title='Number of Forks per Repository', 
+                        labels={'Repository_Name': 'Repository', 'Number_of_Forks': 'Forks'})
+            st.plotly_chart(fig)
+
+        # Bar chart: Number of open issues per repository
+        if not filtered_data.empty and 'Number_of_Open_Issues' in filtered_data.columns:
+            st.subheader(" Number of Open Issues per Repository")
+            fig = px.bar(filtered_data, x='Repository_Name', y='Number_of_Open_Issues', 
+                        title='Number of Open Issues per Repository', 
+                        labels={'Repository_Name': 'Repository', 'Number_of_Open_Issues': 'Open Issues'})
+            st.plotly_chart(fig)
+
+
+        # Pie chart: Distribution of repositories by license type
+        if not filtered_data.empty and 'License_Type' in filtered_data.columns:
+            st.subheader(" Distribution by License Type")
+
+            # Group by License_Type to get the count of repositories for each license
+            license_data = filtered_data.groupby('License_Type').size().reset_index(name='Repository_Count')
+
+            # Create pie chart
+            fig = px.pie(license_data, names='License_Type', values='Repository_Count', 
+                        title='Repositories by License Type', 
+                        labels={'Repository_Count': 'Repository Count'})
+
+            # Display the pie chart
+            st.plotly_chart(fig)
+
+        
+            # Bar chart: Comparison of stars and forks
+        if not filtered_data.empty and 'Number_of_Stars' in filtered_data.columns and 'Number_of_Forks' in filtered_data.columns:
+            st.subheader(" Comparison of Stars and Forks")
+            
+            # Create a new DataFrame for stars and forks comparison
+            comparison_data = filtered_data[['Repository_Name', 'Number_of_Stars', 'Number_of_Forks']].melt(id_vars='Repository_Name', 
+                                                                                                        value_vars=['Number_of_Stars', 'Number_of_Forks'],
+                                                                                                        var_name='Metric', value_name='Count')
+
+            fig = px.bar(comparison_data, x='Repository_Name', y='Count', color='Metric', barmode='group',
+                        title='Comparison of Stars and Forks per Repository')
+            st.plotly_chart(fig)
+
+
+
 
 
 # Main Streamlit app function
@@ -120,29 +241,11 @@ def run_app():
     # Load the dataset
     data = load_data()
 
-    selected_topic,filtered_data=filters(data)
+    selected_topic,selected_creation_date,filtered_data=filters(data)
 
-   
-
-   
-    st.write(f"Filtered Repositories under Topic:", selected_topic.upper() )
-    st.write(f"Total Repositories Found: {len(filtered_data)}")
+    Topic_Visuals(selected_topic,selected_creation_date,filtered_data)
 
 
-    if not filtered_data.empty:
-        st.dataframe(filtered_data)
-    else:
-        st.write("No repositories found with the selected filters.")
-
-    # Visualizations
-    st.subheader("Visual Insights")
-
-    # Plotting a bar chart of the number of stars by repository
-    if not filtered_data.empty:
-        st.bar_chart(filtered_data.set_index('Repository_Name')['Number_of_Stars'])
-
-    
-    
 
 # Run the app
 if __name__ == "__main__":
