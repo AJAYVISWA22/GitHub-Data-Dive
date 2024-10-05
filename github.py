@@ -20,17 +20,27 @@ def img_desc(selected_topic):
 
     # Dictionary to map topics to descriptions
     topic_descriptions = {
-        "machine learning": "Machine learning is the study of computer algorithms that improve automatically through experience.",
-        "data visualization": "Data visualization is the graphical representation of information and data.",
-        "deep learning": "Deep learning is a subset of machine learning involving neural networks with three or more layers.",
-        "natural language processing": "NLP is the branch of AI that helps computers understand, interpret, and manipulate human language.",
-        "data engineering": "Data engineering focuses on the practical application of data collection and data pipelining.",
-        "data science": "Data science is an interdisciplinary field that uses scientific methods, processes, and systems to extract knowledge from data.",
-        "python": "Python is a versatile and powerful programming language widely used in various domains, especially data science and AI.",
-        "sql": "SQL is a domain-specific language used in programming and managing relational databases.",
-        "cloud computing": "Cloud computing is the delivery of computing services over the internet, including storage, processing, and networking.",
-        "big data": "Big data refers to extremely large datasets that may be analyzed computationally to reveal patterns, trends, and associations."
-    }
+    "machine learning": "Machine learning is the study of computer algorithms that improve automatically through experience. It enables systems to learn from data patterns and make predictions or decisions without explicit programming. Applications range from recommendation systems to image recognition.",
+    
+    "data visualization": "Data visualization is the graphical representation of information and data, allowing complex data sets to be communicated clearly and efficiently. By using visual elements like charts and maps, it helps users understand trends, outliers, and patterns in data. Effective visualizations enhance decision-making and storytelling.",
+    
+    "deep learning": "Deep learning is a subset of machine learning involving neural networks with three or more layers, which simulate the way the human brain operates. It excels in processing unstructured data such as images, sound, and text, driving advancements in fields like natural language processing and computer vision.",
+    
+    "natural language processing": "Natural Language Processing (NLP) is the branch of AI that enables computers to understand, interpret, and generate human language. It encompasses a range of tasks, from sentiment analysis and language translation to chatbots and voice recognition. NLP aims to bridge the gap between human communication and computer understanding.",
+    
+    "data engineering": "Data engineering focuses on the practical application of data collection, storage, and transformation processes to prepare data for analytical and operational purposes. It involves building data pipelines, designing database systems, and ensuring data quality and integrity, enabling data scientists and analysts to access reliable data for analysis.",
+    
+    "data science": "Data science is an interdisciplinary field that uses scientific methods, processes, algorithms, and systems to extract knowledge and insights from structured and unstructured data. It combines expertise from statistics, computer science, and domain knowledge, playing a critical role in decision-making across various industries.",
+    
+    "python": "Python is a versatile and powerful programming language widely used in various domains, particularly in data science, web development, and automation. Known for its readability and simplicity, Python boasts a rich ecosystem of libraries and frameworks, such as Pandas and NumPy, making it a favorite among data professionals.",
+    
+    "sql": "SQL (Structured Query Language) is a domain-specific language used in programming and managing relational databases. It enables users to create, read, update, and delete data efficiently, allowing for complex queries and data manipulation. SQL is essential for data analysis and database management.",
+    
+    "cloud computing": "Cloud computing refers to the delivery of computing services over the internet, including storage, processing, and networking. It allows organizations to access and manage their data and applications remotely, providing scalability, flexibility, and cost-effectiveness. Cloud services can be categorized into public, private, and hybrid clouds.",
+    
+    "big data": "Big data refers to extremely large datasets that may be analyzed computationally to reveal patterns, trends, and associations. These datasets can be structured, semi-structured, or unstructured, requiring specialized tools and techniques for processing. Big data analytics helps organizations gain insights that drive strategic decision-making."
+        }
+
 
     image_path = os.path.join(image_folder, f'{selected_topic.lower()}.jpg')
     if os.path.exists(image_path):
@@ -55,10 +65,10 @@ def filters(data):
     selected_language = st.sidebar.selectbox("Select Programming Language", languages)
 
     # Filter by creation and last updated date
-    creation_dates = ['Default'] + list(pd.to_datetime(filtered_by_topic['Creation_Date']).dt.year.unique())
+    creation_dates = ['Default'] + sorted(list(pd.to_datetime(filtered_by_topic['Creation_Date']).dt.year.unique()))
     selected_creation_date = st.sidebar.selectbox("Select Creation Year", creation_dates)
 
-    last_updated_dates = ['Default'] + list(pd.to_datetime(filtered_by_topic['Last_Updated_Date']).dt.year.unique())
+    last_updated_dates = ['Default'] + sorted(list(pd.to_datetime(filtered_by_topic['Last_Updated_Date']).dt.year.unique()),reverse=True)
     selected_last_updated_date = st.sidebar.selectbox("Select Last Updated Year", last_updated_dates)
 
     # Apply filters
