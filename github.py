@@ -70,6 +70,9 @@ def streamlit():
         description = topic_descriptions.get(selected_topic.lower(), "No description available for this topic.")
         st.write(description)
 
+    img_desc(selected_topic)
+    
+        
     # Filter by programming language
     languages = data['Programming_Language'].unique()
     selected_language = st.sidebar.selectbox("Select Programming Language", languages)
