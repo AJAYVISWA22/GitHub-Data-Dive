@@ -2,10 +2,15 @@ import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
 from PIL import Image
+import os
 import plotly.express as px
 
-# Create the PostgreSQL engine
-engine = create_engine('postgresql+psycopg2://postgres:Ajay@localhost:5432/github_data')
+
+
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+# Create the engine using the DATABASE_URL
+engine = create_engine(DATABASE_URL)
 
 # Load data from the PostgreSQL database
 def load_data():
