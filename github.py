@@ -11,6 +11,10 @@ engine = create_engine('postgresql+psycopg2://postgres:Ajay@localhost:5432/githu
 def load_data():
     query = "SELECT * FROM public.repositories;"
     df = pd.read_sql(query, engine)
+    
+    df.index = df.index + 1 
+    df.index.name = 'ID'  
+
     return df
 
 # Function to display image and description for the selected topic
@@ -166,10 +170,10 @@ def Topic_Visuals(selected_topic, selected_creation_date, filtered_data):
 
 def repo_visuals(filtered_data):
     st.markdown(f"<h2 style='text-align: center;'>Selected  Repository </h2>", unsafe_allow_html=True)
-    repo_index = st.sidebar.number_input("Select Repository ID", min_value=0, max_value=len(filtered_data)-1, step=1)
+    repo_index = st.sidebar.number_input("Select Repository ID", min_value=1, max_value=len(filtered_data), step=1)
 
     if not filtered_data.empty:
-        selected_repo = filtered_data.iloc[repo_index]
+        selected_repo = filtered_data.iloc[repo_index-1]
         
         st.markdown(f"""
             <div style='background-color: #f4f4f4; padding: 20px; border-radius: 10px;'>
