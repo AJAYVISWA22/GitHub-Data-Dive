@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
-import os
+from PIL import Image
 import plotly.express as px
 
 # Create the PostgreSQL engine
@@ -20,7 +20,7 @@ def load_data():
 # Function to display image and description for the selected topic
 def img_desc(selected_topic):
     # Folder where images are stored
-    image_folder = 'Images'
+    
 
     # Dictionary to map topics to descriptions
     topic_descriptions = {
@@ -46,9 +46,13 @@ def img_desc(selected_topic):
         }
 
 
-    image_path = os.path.join(image_folder, f'{selected_topic.lower()}.jpg')
-    if os.path.exists(image_path):
-        st.image(image_path, caption=selected_topic.title(), use_column_width=True)
+    image_path = f'Images/{selected_topic.lower()}.jpg'
+
+    try:
+        selected_image = Image.open(image_path)  # Load the image
+        st.image(selected_image, caption=selected_topic.title(), use_column_width=True)  # Display the image
+    except FileNotFoundError:
+        st.write(f"Image for {selected_topic.title()} not found.")
         
     # Display description
     description = topic_descriptions.get(selected_topic.lower(), "No description available for this topic.")
