@@ -17,8 +17,7 @@ The project includes the following key features:
 - [Database Schema](#database-schema)
 - [Usage](#usage)
 - [Visualizations](#visualizations)
-- [License](#license)
-
+- [Deployment](#deployment)
 ## Features
 
 1. **Filter GitHub Repositories**:
@@ -157,3 +156,9 @@ The application provides several types of visualizations:
 
 - **Line Chart**:
   - Yearly and monthly trends in repository creation.
+
+## Deployment
+
+The GitHub Data Dive app is live and accessible at the following link:
+
+[GitHub Data Dive - Live Demo](https://github-data-dive-m7n9.onrender.com/)
